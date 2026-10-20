@@ -337,6 +337,19 @@ func (x509CertificateWithMetadata *CertificateWithMetadata) getSignatureAlgorith
 			signature:        nil,
 		}, nil
 	default:
+		// Go's x509.SignatureAlgorithm enum has no constant for ML-DSA
+		// (FIPS 204) -- fall back to a direct ASN.1 OID lookup before
+		// giving up. See mldsa.go for why this is needed.
+		if oid, ok := rawSignatureAlgorithmOID(x509CertificateWithMetadata.Raw); ok {
+			if name, paramSet, isMLDSA := mlDSAVariant(oid); isMLDSA {
+				comp := getMLDSAAlgorithmComponent(path, name, paramSet, oid)
+				return signatureAlgorithmResult{
+					hashAndSignature: &comp,
+					hash:             nil,
+					signature:        nil,
+				}, nil
+			}
+		}
 		return signatureAlgorithmResult{
 			hashAndSignature: nil,
 			hash:             nil,
@@ -347,6 +360,25 @@ func (x509CertificateWithMetadata *CertificateWithMetadata) getSignatureAlgorith
 
 // Generate the CycloneDX component for the public key
 func (x509CertificateWithMetadata *CertificateWithMetadata) getPublicKeyComponent() (cdx.Component, error) {
+	if x509CertificateWithMetadata.PublicKey == nil {
+		// cert.PublicKey is nil for an algorithm Go's crypto/x509 does not
+		// recognize (e.g. ML-DSA) -- scanner/key's typed switch can't help
+		// here, read the raw key bytes out of SubjectPublicKeyInfo instead.
+		if oid, keyBytes, ok := rawPublicKeyInfo(x509CertificateWithMetadata.RawSubjectPublicKeyInfo); ok {
+			if name, _, isMLDSA := mlDSAVariant(oid); isMLDSA {
+				component := getMLDSAPublicKeyComponent(
+					x509CertificateWithMetadata.path, name,
+					x509CertificateWithMetadata.RawSubjectPublicKeyInfo, keyBytes,
+				)
+				component.Evidence = &cdx.Evidence{
+					Occurrences: &[]cdx.EvidenceOccurrence{
+						{Location: x509CertificateWithMetadata.path},
+					},
+				}
+				return component, nil
+			}
+		}
+	}
 	component, err := key.GenerateCdxComponent(x509CertificateWithMetadata.PublicKey)
 	if err != nil {
 		return cdx.Component{}, err
@@ -383,6 +415,14 @@ func (x509CertificateWithMetadata *CertificateWithMetadata) getPublicKeyAlgorith
 	case x509.Ed25519:
 		return getEd25519AlgorithmComponent(x509CertificateWithMetadata.path), nil
 	default:
+		// Same ML-DSA gap as getSignatureAlgorithmComponent above, this
+		// time for the public-key AlgorithmIdentifier in
+		// SubjectPublicKeyInfo rather than the outer signatureAlgorithm.
+		if oid, _, ok := rawPublicKeyInfo(x509CertificateWithMetadata.RawSubjectPublicKeyInfo); ok {
+			if name, paramSet, isMLDSA := mlDSAVariant(oid); isMLDSA {
+				return getMLDSAAlgorithmComponent(x509CertificateWithMetadata.path, name, paramSet, oid), nil
+			}
+		}
 		return cdx.Component{}, errors.ErrX509UnknownAlgorithm
 	}
 }
