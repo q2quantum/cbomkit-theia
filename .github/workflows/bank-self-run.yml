@@ -1,0 +1,44 @@
+name: Bank self-run synthetic validation
+
+on:
+  push:
+    branches: [bank-self-run-guide]
+    paths:
+      - 'docs/bank-self-run.md'
+      - 'tools/check_handover_cbom.py'
+      - 'tools/test_check_handover_cbom.py'
+      - 'tools/test_bank_self_run.sh'
+      - '.github/workflows/bank-self-run.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build exactly as documented
+        run: |
+          go mod download
+          go build -o cbomkit-theia .
+      - name: Test the documented local scan on generated keys
+        run: bash tools/test_bank_self_run.sh
+      - name: Upload counts only
+        uses: actions/upload-artifact@v4
+        with:
+          name: bank-self-run-validation
+          path: bank-self-run-validation.json
+          if-no-files-found: error
+          retention-days: 30

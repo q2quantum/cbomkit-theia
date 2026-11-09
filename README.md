@@ -1,5 +1,8 @@
 # CBOMkit-theia
 
+For the q2quantum bank pilot, see the [local self-run guide](docs/bank-self-run.md)
+for the tested directory scan, output checks and handover brief.
+
 [![GitHub License](https://img.shields.io/github/license/cbomkit/cbomkit-theia)](https://opensource.org/licenses/Apache-2.0)
 
 This repository contains CBOMkit-theia: a tool that detects cryptographic assets in container images as well as directories and generates [CBOM](https://cyclonedx.org/capabilities/cbom/).
