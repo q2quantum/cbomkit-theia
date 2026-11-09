@@ -13,9 +13,10 @@ each run. Do not substitute an upstream release and assume identical results.
 ## 1. Build and scan
 
 Requirements: Linux or an already configured WSL environment, Git, Go **1.26.8**
-or newer compatible with `go.mod`, and Python **3.11+**. OpenSSL is needed only
-for the synthetic demonstration below. Docker is not required for directory
-scanning. Building downloads public Go dependencies; plan that access separately
+or newer compatible with `go.mod`, Python **3.11+**, and OpenSSL. The scanner uses
+OpenSSL to expand `DEFAULT` cipher settings; the demonstration also uses it to
+generate synthetic keys. Record the OpenSSL version in the brief. Docker is not
+required for directory scanning. Building downloads public Go dependencies; plan that access separately
 from scanning bank files.
 
 ```bash
@@ -27,6 +28,7 @@ go build -o cbomkit-theia .
 umask 077
 mkdir -p local-output
 git rev-parse HEAD > local-output/scanner-revision.txt
+openssl version > local-output/openssl-version.txt
 printf 'ignore: []\n' > local-output/config.yaml
 
 # Replace this with an approved absolute directory, outside this checkout.
@@ -74,7 +76,7 @@ file content.
 
 Copy these five fields into `brief.md`:
 
-1. **Scope:** system alias, scan date, checkout revision, JSON SHA-256, approved
+1. **Scope:** system alias, scan date, checkout revision, OpenSSL version, JSON SHA-256, approved
    directories, exclusions and errors. Describe any redaction or anonymisation.
 2. **Purpose:** what the application does and where the inventoried cryptography
    is used. Use `unknown` where evidence is missing.
