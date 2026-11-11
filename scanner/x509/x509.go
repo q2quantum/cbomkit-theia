@@ -17,10 +17,11 @@
 package x509
 
 import (
+	"crypto/sha256"
 	"crypto/x509"
 	"fmt"
 	"path/filepath"
-        "strings"
+	"strings"
 	"time"
 
 	"github.com/cbomkit/cbomkit-theia/scanner/errors"
@@ -119,10 +120,15 @@ func GenerateCdxComponents(certificateWithMetadata *CertificateWithMetadata) (*[
 
 // Generate the CycloneDX component for the certificate
 func (x509CertificateWithMetadata *CertificateWithMetadata) getCertificateComponent() cdx.Component {
+	name := x509CertificateWithMetadata.Subject.CommonName
+	if name == "" {
+		name = "X.509 certificate: " + filepath.Base(x509CertificateWithMetadata.path)
+	}
 	return cdx.Component{
 		Type:   cdx.ComponentTypeCryptographicAsset,
-		Name:   x509CertificateWithMetadata.Subject.CommonName,
+		Name:   name,
 		BOMRef: uuid.New().String(),
+		Hashes: &[]cdx.Hash{{Algorithm: cdx.HashAlgoSHA256, Value: fmt.Sprintf("%x", sha256.Sum256(x509CertificateWithMetadata.Raw))}},
 		CryptoProperties: &cdx.CryptoProperties{
 			AssetType: cdx.CryptoAssetTypeCertificate,
 			CertificateProperties: &cdx.CertificateProperties{
@@ -349,6 +355,8 @@ func (x509CertificateWithMetadata *CertificateWithMetadata) getSignatureAlgorith
 					signature:        nil,
 				}, nil
 			}
+			comp := getUnknownAlgorithmComponent(path, oid)
+			return signatureAlgorithmResult{hashAndSignature: &comp}, nil
 		}
 		return signatureAlgorithmResult{
 			hashAndSignature: nil,
@@ -377,6 +385,9 @@ func (x509CertificateWithMetadata *CertificateWithMetadata) getPublicKeyComponen
 				}
 				return component, nil
 			}
+			return getMLDSAPublicKeyComponent(x509CertificateWithMetadata.path,
+				"Unknown public key (OID "+oid.String()+")",
+				x509CertificateWithMetadata.RawSubjectPublicKeyInfo, keyBytes), nil
 		}
 	}
 	component, err := key.GenerateCdxComponent(x509CertificateWithMetadata.PublicKey)
@@ -422,6 +433,7 @@ func (x509CertificateWithMetadata *CertificateWithMetadata) getPublicKeyAlgorith
 			if name, paramSet, isMLDSA := mlDSAVariant(oid); isMLDSA {
 				return getMLDSAAlgorithmComponent(x509CertificateWithMetadata.path, name, paramSet, oid), nil
 			}
+			return getUnknownAlgorithmComponent(x509CertificateWithMetadata.path, oid), nil
 		}
 		return cdx.Component{}, errors.ErrX509UnknownAlgorithm
 	}

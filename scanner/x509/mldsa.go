@@ -85,7 +85,7 @@ type subjectPublicKeyInfoASN1 struct {
 // already accepted.
 func rawSignatureAlgorithmOID(certDER []byte) (oid asn1.ObjectIdentifier, ok bool) {
 	var outer certificateOuterASN1
-	if _, err := asn1.Unmarshal(certDER, &outer); err != nil {
+	if rest, err := asn1.Unmarshal(certDER, &outer); err != nil || len(rest) != 0 || len(outer.SignatureAlgorithm.Algorithm) == 0 {
 		return nil, false
 	}
 	return outer.SignatureAlgorithm.Algorithm, true
@@ -97,7 +97,7 @@ func rawSignatureAlgorithmOID(certDER []byte) (oid asn1.ObjectIdentifier, ok boo
 // does not recognize).
 func rawPublicKeyInfo(rawSPKI []byte) (oid asn1.ObjectIdentifier, keyBytes []byte, ok bool) {
 	var spki subjectPublicKeyInfoASN1
-	if _, err := asn1.Unmarshal(rawSPKI, &spki); err != nil {
+	if rest, err := asn1.Unmarshal(rawSPKI, &spki); err != nil || len(rest) != 0 || len(spki.Algorithm.Algorithm) == 0 {
 		return nil, nil, false
 	}
 	return spki.Algorithm.Algorithm, spki.PublicKey.Bytes, true
