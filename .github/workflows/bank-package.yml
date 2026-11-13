@@ -1,5 +1,8 @@
 name: Bank inventory binary package
 on:
+  push:
+    branches: [bank-self-run-guide]
+    paths: ['.github/workflows/bank-package.yml']
   workflow_dispatch: {}
 permissions:
   contents: write
