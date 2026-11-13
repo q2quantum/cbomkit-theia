@@ -14,10 +14,14 @@ openssl pkcs8 -topk8 -in "$task_dir/input/server.key" -out "$task_dir/input/encr
 openssl pkey -in "$task_dir/input/server.key" -outform DER -out "$task_dir/output/rsa.der"
 openssl pkey -in "$task_dir/input/state/k1" -outform DER -out "$task_dir/output/ec.der"
 printf 'ignore: []\n' > "$task_dir/output/config.yaml"
+if [ -n "${BANK_PACKAGE_DIR:-}" ]; then
+  bash "$BANK_PACKAGE_DIR/run-inventory.sh" "$task_dir/input" "$task_dir/output"
+else
 ./cbomkit-theia dir "$task_dir/input" \
   --config "$task_dir/output/config.yaml" \
   --plugins certificates,secrets,opensslconf --log-level error \
   > "$task_dir/output/cbom.json" 2> "$task_dir/output/scan.stderr"
+fi
 python3 tools/check_handover_cbom.py "$task_dir/output/cbom.json"
 python3 tools/test_check_handover_cbom.py
 python3 - "$task_dir" <<'PY'

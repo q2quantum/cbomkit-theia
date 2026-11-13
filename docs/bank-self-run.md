@@ -10,7 +10,32 @@ code is based on revision `aad97b30ed2f38bbe451716fb50f99fb851cb932`, with the
 OpenSSL Groups and ML-DSA certificate fixes. Record the checkout revision for
 each run. Do not substitute an upstream release and assume identical results.
 
-## 1. Build and scan
+## 1. Download and run (recommended)
+
+Use the [tested Linux amd64 pilot package](https://github.com/q2quantum/cbomkit-theia/releases/tag/bank-pilot-v0.1.0).
+Requirements: Linux x86-64 or an already configured WSL distribution, Python
+3.11+ and OpenSSL. Git and Go are **not** needed for this path. Download the
+archive and `SHA256SUMS` from that same release on a machine authorised to access
+GitHub; transfer the files to the approved scanning machine if it is offline.
+
+```bash
+sha256sum -c SHA256SUMS
+mkdir q2quantum-inventory
+tar -xzf q2quantum-inventory-linux-amd64-v0.1.0.tar.gz -C q2quantum-inventory
+bash q2quantum-inventory/run-inventory.sh \
+  /absolute/path/to/approved-files /absolute/path/to/local-output
+```
+
+The script runs locally and does not upload data. It refuses output inside the
+scanned directory and refuses to overwrite an existing `cbom.json`. Record the
+included `REVISION`; keep the package checksum with your brief. Then follow
+**Review and return** below. In that section, the packaged checker is
+`q2quantum-inventory/check_handover_cbom.py` rather than `tools/check_handover_cbom.py`.
+Unknown or unsupported algorithms may be absent from the scan; the pilot does
+not establish exhaustive detection. The separate IETF preservation experiment is
+not included in this release.
+
+## 1a. Build from source (alternative)
 
 Requirements: Linux or an already configured WSL environment, Git, Go **1.26.8**
 or newer compatible with `go.mod`, Python **3.11+**, and OpenSSL. The scanner uses
